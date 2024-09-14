@@ -27,7 +27,8 @@ while count <= 257:
         name = base.find('h1', {'class': 'product-title content-title'}).text.strip()
         print(name)
         price = base.find('span', {'itemprop': 'price'}).text.strip()
-        print(price)
+        cena = price if price else None
+        print(cena)
         articul = base.find('span', {'class': 'product-sku_field js-product-sku_field'}).text.strip()
         print(articul)
         try:
@@ -52,7 +53,7 @@ while count <= 257:
         print(pix)
         print('\n')
 
-        storage = {'category': category, 'name': name, 'articul': articul, 'price': price,
+        storage = {'category': category, 'name': name, 'articul': articul, 'price': cena,
                    'params': '; '.join(all_param), 'photo': pix, 'url': link}
         fields = ['Category', 'Name', 'Articul', 'Price', 'Params', 'Photo', 'URL']
         with open(f'{category}.csv', 'a+', encoding='utf-16') as f:
