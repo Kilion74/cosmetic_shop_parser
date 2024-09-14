@@ -1,47 +1,46 @@
 import requests  # pip install requests
-import pandas as pd  # pip install pandas
+import csv
 from bs4 import BeautifulSoup  # pip install bs4
-import os
+import openpyxl
+from openpyxl import Workbook
 
-print(os.getcwd())
+# pip install lxml
+
 count = 1
-data_list = []  # Список для хранения всех собранных данных
-
 while count <= 257:
     url = f'https://www.simfoniashop.ru/collection/volosy?page={count}'
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_10_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/39.0.2171.95 Safari/537.36',
         'Accept': '*/*',
         'Accept-Encoding': 'gzip, deflate, br',
-        'Connection': 'keep-alive'}
+        'Connactoin': 'keep-alive'}
     data = requests.get(url, headers=headers).text
     block = BeautifulSoup(data, 'lxml')
     category = block.find('h1', {'class': 'collection-title content-title'}).text.strip()
     print(category)
     heads = block.find_all('div', {'class': 'product_preview product_preview--collection'})
     print(len(heads))
-
     for i in heads:
         w = i.find_next('div', {'class': 'product_preview-preview'}).find('a', href=True)
-        link = 'https://www.simfoniashop.ru' + w['href']
+        print('https://www.simfoniashop.ru' + w['href'])
+        link = ('https://www.simfoniashop.ru' + w['href'])
         lock = requests.get(link, headers=headers).text
         base = BeautifulSoup(lock, 'lxml')
         name = base.find('h1', {'class': 'product-title content-title'}).text.strip()
         print(name)
         price = base.find('span', {'itemprop': 'price'}).text.strip()
-        print(price)
+        cena = price if price else None
+        print(cena)
         articul = base.find('span', {'class': 'product-sku_field js-product-sku_field'}).text.strip()
         print(articul)
-
         try:
-            description = base.find('div', {'id': 'description'}).find('div',
+            discription = base.find('div', {'id': 'description'}).find('div',
                                                                        {'class': 'product-description editor'}).find(
                 'div').text.strip()
-            print(description)
+            print(discription)
         except:
-            description = base.find('div', {'class': 'product-description editor'}).find('p').text.strip()
-            print(description)
-
+            discription = base.find('div', {'class': 'product-description editor'}).find('p').text.strip()
+            print(discription)
         try:
             all_param = []
             params = base.find('div', {'id': 'characteristics'}).find_all('tr')
@@ -52,26 +51,45 @@ while count <= 257:
                 all_param.append(value)
         except:
             all_param = []
-
         pix = base.find('a', {'class': 'MagicZoom'}).find('img').get('src')
         print(pix)
         print('\n')
 
-        # Добавляем собранные данные в список
+        # Меняем ваш код для записи в xlsx
         storage = {
             'category': category,
             'name': name,
             'articul': articul,
-            'price': price,
+            'price': cena,
             'params': '; '.join(all_param),
-            'photo': pix
+            'photo': pix,
+            'url': link
         }
-        data_list.append(storage)
 
+        fields = ['Category', 'Name', 'Articul', 'Price', 'Params', 'Photo', 'URL']
+
+        # Создаём или открываем существующий файл xlsx
+        file_name = f'{category}.xlsx'
+        try:
+            workbook = openpyxl.load_workbook(file_name)
+            worksheet = workbook.active
+        except FileNotFoundError:
+            workbook = Workbook()
+            worksheet = workbook.active
+            worksheet.append(fields)  # Записываем заголовки, если файл новый
+
+        # Записываем данные
+        worksheet.append([
+            storage['category'],
+            storage['name'],
+            storage['articul'],
+            storage['price'],
+            storage['params'],
+            storage['photo'],
+            storage['url']
+        ])
+
+        # Сохраняем изменения
+        workbook.save(file_name)
     count += 1
     print(count)
-
-# Создаем DataFrame и сохраняем в Excel
-df = pd.DataFrame(data_list)
-df.to_excel(f'{category}.xlsx', index=False, engine='openpyxl')
-print("Данные успешно сохранены в Excel!")
